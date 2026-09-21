@@ -24,9 +24,9 @@ python -m http.server 8000 --directory site
 
 ## 部署到阿里云 ECS
 
-AI PM 项目中现有的阿里云 ECS 正在用 Nginx 代理 SkillHub 的 80 端口和 Node 服务的 3000 端口。本项目部署到同一主机的独立路径 `/reelmatic/`，不会替换 SkillHub 的根路径或论坛服务。部署后地址为 <http://47.116.109.213/reelmatic/>。
+AI PM 项目中现有的阿里云 ECS 使用 Nginx 在 80 端口提供 SkillHub。本项目单独监听 TCP 3032，部署后地址为 <http://47.116.109.213:3032/>；SkillHub 继续使用原来的地址 <http://47.116.109.213/>。旧的 `/reelmatic/` 路径仍可作为兼容入口。
 
-ECS 需允许 SSH 入站，并让公网 HTTP 80 端口可访问。部署用户需要能写入 `/var/www/reelmatic`、`/etc/nginx/conf.d`，并能运行 `nginx -t` 与重载 Nginx。
+阿里云安全组需允许 TCP 3032 入站；ECS 还需允许 SSH 入站。部署用户需要能写入 `/var/www/reelmatic`、`/etc/nginx/conf.d`，并能运行 `nginx -t` 与重载 Nginx。
 
 在 GitHub 仓库的 **Settings → Secrets and variables → Actions** 添加以下 Secrets：
 
@@ -38,7 +38,7 @@ ECS 需允许 SSH 入站，并让公网 HTTP 80 端口可访问。部署用户�
 | `ALIYUN_SSH_KEY` | 有权限部署的 SSH 私钥 |
 | `ALIYUN_KNOWN_HOSTS` | ECS 的 SSH 主机公钥记录 |
 
-随后在 **Actions → Deploy to Alibaba Cloud ECS → Run workflow** 手动运行部署。工作流把静态文件复制到 `/var/www/reelmatic/site`，安装独立的 Nginx 站点配置并在配置检查通过后重载 Nginx。已有根路径与 `/forum` 继续转发给 SkillHub。
+随后在 **Actions → Deploy to Alibaba Cloud ECS → Run workflow** 手动运行部署。工作流把静态文件复制到 `/var/www/reelmatic/site`，安装 Nginx 配置并在配置检查通过后重载 Nginx。SkillHub 的 80 端口与 ReelMatic 的 3032 端口分别提供两个网站。
 
 也可以在一台空白 ECS 上使用 Docker Compose 独立部署：
 

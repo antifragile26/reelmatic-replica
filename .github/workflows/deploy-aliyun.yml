@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Publish static site behind the existing Nginx service
+      - name: Publish static site on its own Nginx port
         env:
           ALIYUN_HOST: ${{ secrets.ALIYUN_HOST }}
           ALIYUN_PORT: ${{ secrets.ALIYUN_PORT }}
