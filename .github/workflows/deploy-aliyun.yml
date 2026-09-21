@@ -1,0 +1,40 @@
+name: Deploy to Alibaba Cloud ECS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Publish static site behind the existing Nginx service
+        env:
+          ALIYUN_HOST: ${{ secrets.ALIYUN_HOST }}
+          ALIYUN_PORT: ${{ secrets.ALIYUN_PORT }}
+          ALIYUN_USER: ${{ secrets.ALIYUN_USER }}
+          ALIYUN_SSH_KEY: ${{ secrets.ALIYUN_SSH_KEY }}
+          ALIYUN_KNOWN_HOSTS: ${{ secrets.ALIYUN_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${ALIYUN_HOST:?Add the ALIYUN_HOST repository secret}"
+          : "${ALIYUN_USER:?Add the ALIYUN_USER repository secret}"
+          : "${ALIYUN_SSH_KEY:?Add the ALIYUN_SSH_KEY repository secret}"
+          : "${ALIYUN_KNOWN_HOSTS:?Add the ALIYUN_KNOWN_HOSTS repository secret}"
+          PORT="${ALIYUN_PORT:-22}"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$ALIYUN_SSH_KEY" > ~/.ssh/aliyun_deploy_key
+          chmod 600 ~/.ssh/aliyun_deploy_key
+          printf '%s\n' "$ALIYUN_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          SSH_OPTS=(-i ~/.ssh/aliyun_deploy_key -p "$PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
+          SCP_OPTS=(-i ~/.ssh/aliyun_deploy_key -P "$PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
+          DEST="$ALIYUN_USER@$ALIYUN_HOST"
+          ssh "${SSH_OPTS[@]}" "$DEST" 'mkdir -p /var/www/reelmatic/site'
+          scp "${SCP_OPTS[@]}" -r site/. "$DEST:/var/www/reelmatic/site/"
+          scp "${SCP_OPTS[@]}" deploy/reelmatic.conf "$DEST:/tmp/reelmatic.conf"
+          ssh "${SSH_OPTS[@]}" "$DEST" 'set -e; CONF=/etc/nginx/conf.d/reelmatic.conf; BACKUP=/etc/nginx/conf.d/reelmatic.conf.previous; if test -f "$CONF"; then cp -a "$CONF" "$BACKUP"; fi; install -m 0644 /tmp/reelmatic.conf "$CONF"; if nginx -t && systemctl reload nginx; then rm -f "$BACKUP" /tmp/reelmatic.conf; else if test -f "$BACKUP"; then mv -f "$BACKUP" "$CONF"; else rm -f "$CONF"; fi; nginx -t; systemctl reload nginx || true; exit 1; fi'

@@ -1,0 +1,7 @@
+services:
+  reelmatic:
+    build: .
+    container_name: reelmatic
+    restart: unless-stopped
+    ports:
+      - "80:80"
